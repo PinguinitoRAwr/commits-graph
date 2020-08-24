@@ -5,7 +5,7 @@ import sys
 try:
     from cStringIO import StringIO
 except ImportError:
-    from StringIO import StringIO
+    from io import StringIO
 
 import gzip
 
@@ -34,15 +34,11 @@ def app(environ, start_response):
                      else [path, None])
     if path.endswith('.js'):
         headers.append(('content-type', 'application/javascript'))
-        headers.append(('content-encoding', 'gzip'))
-        buffer = StringIO()
         start_response(status, headers)
-        content = open('..' + path).read()
-        with gzip.GzipFile(mode='wb', compresslevel=6,
-                           fileobj=buffer) as f:
-            f.write(content)
-        return [buffer.getvalue()]
+        response_body = open('..' + path,'rb').read()
+        return iter([response_body])
     headers.append(('content-type', 'text/html'))
     start_response(status, headers)
     data = generate_graph_data(Commit.gets(query or root))
-    return engine.render('index.html', {'data': data})
+    result = engine.render('index.html', {'data': data})
+    return iter([result.encode('utf8')])
